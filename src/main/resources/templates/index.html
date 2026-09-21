@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>符号裁决庭 · Symbol Adjudication Court</title>
+    <link rel="stylesheet" th:href="@{/app.css}"/>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">⚖️ 符号裁决庭</div>
+    <div class="subtitle">在真正链接前，解释每个未定义符号「会选中谁」</div>
+</header>
+
+<main class="layout">
+    <!-- 左栏：导入与方案 -->
+    <aside class="panel left">
+        <section>
+            <h2>① 导入 ELF / 共享对象 / archive</h2>
+            <form id="uploadForm" enctype="multipart/form-data" method="post" action="/api/uploads">
+                <input type="file" id="fileInput" name="files" multiple required/>
+                <button type="submit">上传（只读保存原文件）</button>
+            </form>
+            <div id="uploadErrors" class="errors"></div>
+            <ul id="objectList" class="object-list"></ul>
+        </section>
+
+        <section>
+            <h2>② 显式加载顺序</h2>
+            <p class="hint">按下方列表顺序模拟命令行加载；可上移/下移。顺序变化请新建方案版本。</p>
+            <ol id="loadOrder" class="load-order"></ol>
+        </section>
+
+        <section>
+            <h2>③ 目标平台策略 & 方案</h2>
+            <label class="field">方案名
+                <input id="schemeName" placeholder="例如：mainline-v1"/>
+            </label>
+            <label class="field">策略
+                <select id="policy">
+                    <option value="STATIC_LD">静态链接 (ld 风格，archive 惰性抽取)</option>
+                    <option value="RTLD_GLOBAL">动态加载 (ld.so 全局作用域)</option>
+                </select>
+            </label>
+            <button id="runBtn" class="primary">执行裁决，生成新版本</button>
+        </section>
+
+        <section>
+            <h2>④ 历史方案版本</h2>
+            <ul id="schemeList" class="scheme-list"></ul>
+        </section>
+    </aside>
+
+    <!-- 右栏：结果 -->
+    <section class="panel right">
+        <div class="tabs">
+            <button class="tab active" data-tab="deps">对象依赖</button>
+            <button class="tab" data-tab="symbols">符号候选</button>
+            <button class="tab" data-tab="versions">版本图</button>
+            <button class="tab" data-tab="relocs">Relocation 列表</button>
+            <button class="tab" data-tab="play">逐步播放</button>
+            <button class="tab" data-tab="compare">语义比较</button>
+        </div>
+
+        <div class="scheme-meta" id="schemeMeta">尚未选择方案</div>
+
+        <div class="tabpanel active" id="tab-deps">
+            <h3>加载顺序与依赖（DT_NEEDED）</h3>
+            <div id="loadOrderView"></div>
+            <h3>COMDAT 去重</h3>
+            <div id="comdatView"></div>
+            <h3>损坏隔离</h3>
+            <div id="badView"></div>
+            <h3>警告</h3>
+            <div id="warnView"></div>
+        </div>
+
+        <div class="tabpanel" id="tab-symbols">
+            <div class="toolbar">
+                <input id="symFilter" placeholder="过滤符号名 / 单元 / 版本"/>
+                <select id="statusFilter">
+                    <option value="">全部状态</option>
+                    <option>RESOLVED</option>
+                    <option>UNRESOLVED</option>
+                    <option>AMBIGUOUS</option>
+                    <option>COPY</option>
+                    <option>LOCAL_BOUND</option>
+                    <option>WEAK_UNDEF_KEPT</option>
+                </select>
+            </div>
+            <div id="symbolView"></div>
+        </div>
+
+        <div class="tabpanel" id="tab-versions">
+            <h3>版本定义 / 需求 / 别名（版本索引已还原为版本名）</h3>
+            <div id="versionView"></div>
+        </div>
+
+        <div class="tabpanel" id="tab-relocs">
+            <h3>全部受影响重定位</h3>
+            <div id="relocView"></div>
+        </div>
+
+        <div class="tabpanel" id="tab-play">
+            <h3>Archive 抽取与符号表更新（逐步播放）</h3>
+            <div class="player">
+                <button id="playFirst">⏮</button>
+                <button id="playPrev">◀</button>
+                <button id="playAuto">▶ 播放</button>
+                <button id="playNext">▶|</button>
+                <span id="playPos">0 / 0</span>
+                <select id="playPhase">
+                    <option value="">全部阶段</option>
+                    <option>LOAD</option>
+                    <option>DEPENDENCY</option>
+                    <option>COMDAT</option>
+                    <option>ARCHIVE_SCAN</option>
+                    <option>SYMBOL_UPDATE</option>
+                    <option>RESOLVE</option>
+                </select>
+            </div>
+            <div id="playStep" class="play-step"></div>
+            <div id="playSnapshot"></div>
+        </div>
+
+        <div class="tabpanel" id="tab-compare">
+            <h3>两个方案的语义差异</h3>
+            <div class="compare-row">
+                <select id="compareA"></select>
+                <span>⇄</span>
+                <select id="compareB"></select>
+                <button id="compareBtn">比较</button>
+            </div>
+            <div id="compareView"></div>
+        </div>
+    </section>
+</main>
+<script th:src="@{/app.js}"></script>
+</body>
+</html>
