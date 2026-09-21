@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>符号裁决庭</title>
+<link rel="stylesheet" th:href="@{/app.css}">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="gavel">⚖️</span>
+    <div>
+      <h1>符号裁决庭</h1>
+      <p class="subtitle">在真正链接之前，裁决“这个未定义符号会选中谁”</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button id="btnDemoA" class="btn">载入演示 A</button>
+    <button id="btnDemoB" class="btn">载入演示 B（改顺序/策略）</button>
+    <button id="btnDemoUnmet" class="btn btn-warn">未满足版本</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="sidebar">
+    <section class="card">
+      <h2>导入与加载顺序</h2>
+      <form id="uploadForm">
+        <label class="field">
+          <span>方案名</span>
+          <input name="name" value="新方案" required>
+        </label>
+        <label class="field">
+          <span>目标平台</span>
+          <select name="machine">
+            <option value="62">x86-64</option>
+            <option value="183">AArch64</option>
+            <option value="3">i386</option>
+          </select>
+        </label>
+        <div class="row">
+          <label class="field">
+            <span>归档策略</span>
+            <select name="archivePolicy">
+              <option value="REPEAT">REPEAT（循环扫描）</option>
+              <option value="SINGLE_PASS">SINGLE_PASS（不回溯）</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>同票处理</span>
+            <select name="tiePolicy">
+              <option value="ERROR">保留歧义</option>
+              <option value="LOAD_ORDER">按显式加载顺序</option>
+            </select>
+          </label>
+        </div>
+        <input type="file" name="files" id="fileInput" multiple
+               accept=".o,.so,.a,application/octet-stream">
+        <p class="hint">可多选 ELF object / shared object / ar archive。顺序以文件列表为准（可用 ↑ ↓ 调整）。</p>
+        <ol id="fileOrder" class="file-order"></ol>
+        <button class="btn btn-primary" type="submit">开庭裁决</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>方案版本</h2>
+      <ul id="schemeList" class="scheme-list"></ul>
+    </section>
+
+    <section class="card">
+      <h2>语义比较</h2>
+      <div class="row">
+        <select id="cmpA"></select>
+        <select id="cmpB"></select>
+      </div>
+      <button id="btnCompare" class="btn">比较两版</button>
+      <div id="compareOut" class="compare-out"></div>
+    </section>
+  </aside>
+
+  <section class="content">
+    <div class="tabs">
+      <button class="tab active" data-tab="deps">对象依赖</button>
+      <button class="tab" data-tab="symbols">符号候选</button>
+      <button class="tab" data-tab="versions">版本图</button>
+      <button class="tab" data-tab="relocs">Relocation</button>
+      <button class="tab" data-tab="play">逐步播放</button>
+    </div>
+
+    <div id="summary" class="summary"></div>
+
+    <div id="tab-deps" class="tabpane active"></div>
+    <div id="tab-symbols" class="tabpane"></div>
+    <div id="tab-versions" class="tabpane"></div>
+    <div id="tab-relocs" class="tabpane"></div>
+    <div id="tab-play" class="tabpane">
+      <div class="player">
+        <button id="playStep" class="btn">下一步</button>
+        <button id="playAuto" class="btn">自动播放</button>
+        <button id="playReset" class="btn">重置</button>
+        <span id="playPos" class="play-pos">0 / 0</span>
+      </div>
+      <ol id="playList" class="play-list"></ol>
+    </div>
+  </section>
+</main>
+
+<script th:src="@{/app.js}"></script>
+</body>
+</html>
