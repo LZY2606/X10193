@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: symbol-court
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+symbolcourt:
+  db: ./data/symbolcourt.db
