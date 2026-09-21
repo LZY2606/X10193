@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>符号裁决庭</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <p class="eyebrow">Link Preview Court</p>
+    <h1>符号裁决庭</h1>
+    <p>在不调用系统 linker 的情况下预演 ELF 符号裁决、archive 抽取、版本绑定和 relocation。</p>
+  </div>
+  <div class="badge">只读原二进制 · 快照方案</div>
+</header>
+
+<main class="layout">
+  <aside class="panel sidebar">
+    <h2>导入与方案</h2>
+    <form id="analyze-form">
+      <label>ELF / archive 文件
+        <input type="file" name="files" multiple required>
+      </label>
+      <label>加载顺序（每行一个文件名）
+        <textarea name="order" rows="5" placeholder="main.o&#10;libhooks.a&#10;libapi.so"></textarea>
+      </label>
+      <label>平台策略
+        <select name="policy">
+          <option value="GNU">GNU：循环 archive 重扫</option>
+          <option value="STRICT_ORDER">严格顺序：archive 单遍</option>
+          <option value="DYNAMIC_SCOPE">动态作用域</option>
+        </select>
+      </label>
+      <label>方案名称
+        <input name="name" value="新裁决方案">
+      </label>
+      <button type="submit">开始裁决</button>
+    </form>
+    <h3>历史方案</h3>
+    <div id="plans" class="plan-list"></div>
+    <h3>语义比较</h3>
+    <select id="compare-left"></select>
+    <select id="compare-right"></select>
+    <button id="compare-button">比较两个方案</button>
+    <div id="comparison"></div>
+  </aside>
+
+  <section class="content">
+    <div class="panel hero-panel">
+      <h2 id="plan-title">等待选择方案</h2>
+      <p id="plan-meta">演示数据会在应用启动后自动出现。</p>
+    </div>
+    <div class="cards">
+      <div class="metric"><strong id="object-count">0</strong><span>对象</span></div>
+      <div class="metric"><strong id="decision-count">0</strong><span>裁决</span></div>
+      <div class="metric"><strong id="extract-count">0</strong><span>抽取成员</span></div>
+      <div class="metric"><strong id="event-count">0</strong><span>播放事件</span></div>
+    </div>
+    <nav class="tabs">
+      <button data-tab="dependencies" class="active">对象依赖</button>
+      <button data-tab="symbols">符号候选</button>
+      <button data-tab="versions">版本图</button>
+      <button data-tab="relocations">Relocation</button>
+      <button data-tab="playback">逐步播放</button>
+    </nav>
+    <section id="dependencies" class="panel tab-panel active"></section>
+    <section id="symbols" class="panel tab-panel"></section>
+    <section id="versions" class="panel tab-panel"></section>
+    <section id="relocations" class="panel tab-panel"></section>
+    <section id="playback" class="panel tab-panel"></section>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>
