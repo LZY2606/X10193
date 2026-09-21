@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:sqlite:${TRIBUNAL_DB:./data/tribunal.db}
+    driver-class-name: org.sqlite.JDBC
+  sql:
+    init:
+      mode: always
+server:
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 50MB
