@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>符号裁决庭</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>符号裁决庭</h1>
+    <p>在真正链接前解释“这个未定义符号会选中谁”。原二进制只读保存，方案结果冻结。</p>
+  </div>
+</header>
+<main class="layout">
+  <section class="panel span2">
+    <h2>导入与方案</h2>
+    <div class="row">
+      <input id="file" type="file" accept=".o,.so,a">
+      <button id="upload">导入 ELF / archive</button>
+    </div>
+    <div id="uploadStatus" class="muted"></div>
+    <div class="scheme-form">
+      <input id="label" placeholder="方案名称，例如 order-a">
+      <select id="policy">
+        <option value="gnu-like">GNU-like 策略</option>
+        <option value="strict">Strict 策略</option>
+      </select>
+      <button id="createScheme">按下方顺序创建方案</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>对象与加载顺序</h2>
+    <div id="binaryList" class="list"></div>
+  </section>
+
+  <section class="panel">
+    <h2>方案版本</h2>
+    <div id="schemeList" class="list"></div>
+    <div class="row compare">
+      <input id="schemeA" placeholder="方案 A id">
+      <input id="schemeB" placeholder="方案 B id">
+      <button id="compare">语义比较</button>
+    </div>
+    <div id="comparison"></div>
+  </section>
+
+  <section class="panel span2">
+    <h2>逐步播放</h2>
+    <div class="row">
+      <button id="stepBack">上一步</button>
+      <button id="stepPlay">播放</button>
+      <button id="stepNext">下一步</button>
+      <span id="stepCounter" class="muted"></span>
+    </div>
+    <div id="stepCard" class="step-card">尚未选择方案</div>
+  </section>
+
+  <section class="panel">
+    <h2>对象依赖</h2>
+    <svg id="dependencyGraph" viewBox="0 0 520 360"></svg>
+  </section>
+
+  <section class="panel">
+    <h2>版本图</h2>
+    <svg id="versionGraph" viewBox="0 0 520 360"></svg>
+  </section>
+
+  <section class="panel span2">
+    <h2>符号候选与最终选择</h2>
+    <div id="resolutionList" class="resolution-list"></div>
+  </section>
+
+  <section class="panel span2">
+    <h2>Relocation 列表</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>对象</th><th>符号</th><th>版本</th><th>类型</th><th>偏移</th><th>Addend</th><th>Section</th></tr></thead>
+        <tbody id="relocationList"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>
