@@ -1,0 +1,89 @@
+* { box-sizing: border-box; }
+body { margin:0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background:#0f1420; color:#e6ebf5; }
+.topbar { background:linear-gradient(120deg,#1c2740,#241a3a); padding:18px 28px;
+  border-bottom:2px solid #3a4a6b; }
+.brand { font-size:24px; font-weight:700; letter-spacing:2px; }
+.subtitle { color:#9fb0cc; font-size:13px; margin-top:4px; }
+main { max-width:1200px; margin:20px auto; padding:0 20px; }
+.panel { background:#172033; border:1px solid #2a3852; border-radius:10px; padding:18px 22px;
+  margin-bottom:18px; }
+h2 { font-size:16px; margin:0 0 14px; color:#cdd9f2; }
+.row { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+.row.wrap { flex-wrap:wrap; }
+button { background:#2b3b5e; color:#e6ebf5; border:1px solid #3f5580; border-radius:6px;
+  padding:7px 14px; cursor:pointer; }
+button:hover { background:#35496f; }
+button.primary { background:#3f6fd1; border-color:#5a86e0; font-weight:600; }
+button.primary:hover { background:#4c7ee0; }
+input[type=text],select { background:#0f1828; color:#e6ebf5; border:1px solid #32415f;
+  border-radius:6px; padding:7px 10px; }
+input[type=file] { color:#aebbd4; font-size:13px; }
+.file-list { list-style:none; padding:0; margin:8px 0 0; font-size:13px; }
+.file-list li { padding:4px 0; color:#b9c6de; display:flex; gap:10px; align-items:center; }
+.badge { font-size:11px; padding:1px 7px; border-radius:10px; background:#284063; color:#bcd0f2; }
+.badge.ARCHIVE { background:#4a3a1d; color:#f0d59a; }
+.badge.OBJECT { background:#1d3a2a; color:#a6e8c4; }
+.badge.SHARED { background:#3a1d3a; color:#e3b0f0; }
+.policy-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:8px 18px; margin:10px 0 16px; font-size:13px; color:#c4d0e8; }
+.policy-grid label { display:flex; gap:8px; align-items:center; }
+.policy-grid select { margin-left:auto; }
+.scheme-meta { font-size:13px; color:#9fb0cc; }
+.tabs { display:flex; gap:6px; border-bottom:1px solid #2a3852; margin-bottom:16px; flex-wrap:wrap; }
+.tabs button { background:transparent; border:none; border-bottom:2px solid transparent;
+  border-radius:0; padding:8px 14px; color:#9fb0cc; }
+.tabs button.active { color:#ffffff; border-bottom-color:#5a86e0; }
+.records { display:flex; flex-direction:column; gap:10px; }
+.record { border:1px solid #2a3852; border-radius:8px; padding:12px 14px; background:#131c2e; }
+.record .head { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.sym-name { font-weight:700; font-family:ui-monospace,Menlo,monospace; }
+.status { font-size:11px; padding:2px 9px; border-radius:10px; font-weight:600; }
+.status.RESOLVED { background:#1d4428; color:#89e0a5; }
+.status.RESOLVED_WEAK { background:#2c3d52; color:#b7cce4; }
+.status.UNRESOLVED { background:#4a1f24; color:#f2a9ad; }
+.status.VERSION_UNMET { background:#4a3416; color:#f2cd8f; }
+.status.AMBIGUOUS { background:#4a3a16; color:#f2de8f; }
+.status.CONFLICT { background:#4a1f3a; color:#f0a0d4; }
+.status.COPY_PROTECTED { background:#4a1f24; color:#f2a9ad; }
+.status.LOCAL_NOT_EXPORTED { background:#3a1f4a; color:#d3a9f2; }
+.candidates { margin:8px 0 4px; font-size:13px; }
+.candidate { display:flex; gap:8px; align-items:center; padding:3px 0; flex-wrap:wrap; }
+.candidate .tag { font-size:11px; padding:0 6px; border-radius:4px; }
+.tag.WON { background:#1d4428; color:#89e0a5; }
+.tag.TIED { background:#4a3a16; color:#f2de8f; }
+.tag.ELIMINATED { background:#3a2430; color:#cf93a2; }
+.tag.NOT_CONSIDERED { background:#2a3242; color:#8fa0ba; }
+.elim-reason { color:#d39aa3; font-size:12px; }
+.affected { font-size:12px; color:#93a5c4; margin-top:5px; font-family:ui-monospace,monospace; }
+.explain { color:#cdd9f2; font-size:13px; margin-top:4px; }
+.dep-card { border:1px solid #2a3852; border-radius:8px; padding:10px 14px; margin-bottom:8px;
+  background:#131c2e; }
+.dep-card .title { font-weight:600; }
+.dep-card ul { margin:6px 0 0; font-size:13px; color:#aebbd4; }
+.corrupt { border-color:#7a2c34; }
+.corrupt .err { color:#f2a9ad; font-size:12px; }
+svg { background:#0d1424; border-radius:8px; }
+.playback-controls { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+.playback-controls input[type=range] { flex:1; }
+.event { border-left:3px solid #3f5580; padding:6px 12px; margin:6px 0; font-size:13px;
+  background:#121a2c; border-radius:0 6px 6px 0; }
+.event.ARCHIVE_EXTRACTED { border-left-color:#e0b15a; }
+.event.COMDAT_DISCARDED { border-left-color:#c06080; }
+.event.WINNER_SELECTED { border-left-color:#60c080; }
+.event.VERDICT { border-left-color:#5a86e0; }
+.event.WARNING { border-left-color:#d08050; }
+.event.current { background:#1c2b45; box-shadow:0 0 0 1px #3f5580 inset; }
+.diff-row { display:flex; gap:10px; padding:7px 8px; border-bottom:1px solid #22304a;
+  font-size:13px; align-items:baseline; }
+.diff-kind { font-size:11px; padding:2px 8px; border-radius:10px; min-width:120px; text-align:center; }
+.diff-kind.REBOUND { background:#4a3416; color:#f2cd8f; }
+.diff-kind.ADDRESS_CHANGED { background:#23404a; color:#9ad8e8; }
+.diff-kind.SAME { background:#243448; color:#93a5c4; }
+.diff-kind.STATE_CHANGED, .diff-kind.COPY_FLIPPED { background:#4a1f3a; color:#f0a0d4; }
+.diff-kind.NEWLY_RESOLVED { background:#1d4428; color:#89e0a5; }
+.diff-kind.BECAME_UNRESOLVED, .diff-kind.DISAPPEARED { background:#4a1f24; color:#f2a9ad; }
+.diff-kind.NEW_REFERENCE { background:#2c3d52; color:#b7cce4; }
+.muted { color:#8496b5; font-size:12px; }
+table.symtab { border-collapse:collapse; width:100%; font-size:12px; }
+table.symtab th,table.symtab td { border:1px solid #283650; padding:4px 8px; text-align:left; }

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>符号裁决庭</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">⚖️ 符号裁决庭</div>
+  <div class="subtitle">本地链接前符号裁决 · ELF / SO / Archive · 不调用系统 linker</div>
+</header>
+
+<main>
+  <section class="panel" id="import-panel">
+    <h2>1. 导入对象</h2>
+    <div class="row">
+      <input type="file" id="file-input" multiple>
+      <button id="upload-btn">上传</button>
+    </div>
+    <ul id="file-list" class="file-list"></ul>
+  </section>
+
+  <section class="panel">
+    <h2>2. 加载顺序与平台策略</h2>
+    <div class="row wrap" id="order-list"></div>
+    <div class="policy-grid">
+      <label><input type="checkbox" id="p-multidef"> 允许多重定义 (--allow-multiple-definition)</label>
+      <label><input type="checkbox" id="p-copyprot" checked> 禁止 COPY 绑定 protected 数据</label>
+      <label><input type="checkbox" id="p-prodnprot" checked> protected 对生产者自身不可介入</label>
+      <label>Archive 策略
+        <select id="p-archive">
+          <option value="FIXED_POINT" selected>定点扫描（解析循环依赖）</option>
+          <option value="SINGLE_PASS">单遍扫描（经典静态链接）</option>
+        </select>
+      </label>
+      <label>同等候选
+        <select id="p-tie">
+          <option value="AMBIGUOUS" selected>保留歧义</option>
+          <option value="FIRST">按显式载入次序取首</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <input type="text" id="scheme-name" placeholder="方案名称（可选）">
+      <select id="parent-scheme"><option value="">新方案族</option></select>
+      <button id="arbitrate-btn" class="primary">开庭裁决</button>
+    </div>
+    <div id="scheme-meta" class="scheme-meta"></div>
+  </section>
+
+  <section class="panel" id="result-panel" hidden>
+    <h2>3. 裁决结果</h2>
+    <nav class="tabs">
+      <button data-tab="deps" class="active">对象依赖</button>
+      <button data-tab="symbols">符号候选</button>
+      <button data-tab="versions">版本图</button>
+      <button data-tab="relocs">Relocation</button>
+      <button data-tab="playback">逐步播放</button>
+      <button data-tab="diff">语义比较</button>
+    </nav>
+
+    <div class="tab" data-tab="deps">
+      <div id="deps-view"></div>
+    </div>
+    <div class="tab" data-tab="symbols" hidden>
+      <input type="text" id="symbol-filter" placeholder="过滤符号名…">
+      <div id="symbols-view" class="records"></div>
+    </div>
+    <div class="tab" data-tab="versions" hidden>
+      <div id="versions-view"></div>
+    </div>
+    <div class="tab" data-tab="relocs" hidden>
+      <div id="relocs-view" class="records"></div>
+    </div>
+    <div class="tab" data-tab="playback" hidden>
+      <div class="playback-controls">
+        <button id="pb-first">⏮</button>
+        <button id="pb-prev">◀</button>
+        <button id="pb-play">▶ 播放</button>
+        <button id="pb-next">▶|</button>
+        <button id="pb-last">⏭</button>
+        <input type="range" id="pb-slider" min="0" max="0" value="0">
+        <span id="pb-counter">0 / 0</span>
+      </div>
+      <div id="playback-view"></div>
+    </div>
+    <div class="tab" data-tab="diff" hidden>
+      <div class="row">
+        <select id="diff-a"></select>
+        <select id="diff-b"></select>
+        <button id="diff-run">比较</button>
+      </div>
+      <div id="diff-view"></div>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
