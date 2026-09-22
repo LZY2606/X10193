@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>符号裁决庭 · Symbol Arbitration Court</title>
+<style>
+:root {
+  --bg: #10131a; --panel: #171c26; --panel2: #1d2330; --line: #2a3242;
+  --text: #e6ebf4; --muted: #8b97ac; --accent: #7aa2ff; --accent2: #67d6b3;
+  --warn: #f2c14e; --bad: #ef6b6b; --tie: #c792ea;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg); color: var(--text); font-size: 14px; }
+header { padding: 18px 26px; border-bottom: 1px solid var(--line);
+  display: flex; align-items: baseline; gap: 14px; background: var(--panel); }
+header h1 { margin: 0; font-size: 22px; letter-spacing: 2px; }
+header .sub { color: var(--muted); font-size: 13px; }
+.layout { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 64px); }
+aside { border-right: 1px solid var(--line); padding: 16px; background: var(--panel); overflow-y: auto; }
+main { padding: 18px 22px; overflow-y: auto; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 14px; }
+section h2 { margin: 0 0 10px; font-size: 15px; color: var(--accent); }
+label { display: block; color: var(--muted); margin: 8px 0 3px; font-size: 12px; }
+input[type=text], select { width: 100%; padding: 7px 9px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--panel2); color: var(--text); }
+button { background: var(--accent); color: #0d1017; border: 0; border-radius: 6px;
+  padding: 7px 13px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+button.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.row { display: flex; gap: 8px; align-items: center; }
+.muted { color: var(--muted); }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px;
+  border: 1px solid var(--line); margin-right: 5px; }
+.pill.strong { color: #ffd479; border-color: #5a4a26; }
+.pill.weak { color: #8fb3ff; border-color: #33425f; }
+.pill.common { color: #f0a06b; border-color: #5a3c28; }
+.pill.hidden { color: var(--bad); border-color: #5a2c2c; }
+.pill.protected { color: var(--accent2); border-color: #2c5146; }
+.pill.local { color: var(--muted); }
+.status-RESOLVED { color: var(--accent2); }
+.status-AMBIGUOUS { color: var(--tie); }
+.status-UNRESOLVED { color: var(--bad); }
+.status-COMMON_MERGE { color: var(--warn); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line);
+  vertical-align: top; }
+th { color: var(--muted); font-weight: 500; position: sticky; top: 0; background: var(--panel); }
+.decision { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px;
+  background: var(--panel2); }
+.decision summary { padding: 9px 12px; cursor: pointer; }
+.cand-row { padding: 6px 12px; border-top: 1px dashed var(--line); display: flex;
+  gap: 8px; flex-wrap: wrap; }
+.tag-win { color: var(--accent2); font-weight: 700; }
+.tag-tie { color: var(--tie); font-weight: 700; }
+.tag-rej { color: var(--muted); }
+pre { white-space: pre-wrap; word-break: break-all; margin: 4px 0; font-size: 12px; }
+.obj-item { padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px;
+  margin-bottom: 6px; font-size: 12px; background: var(--panel2); cursor: pointer; }
+.obj-item.active { border-color: var(--accent); }
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.tabs button { margin: 0; background: var(--panel2); color: var(--muted);
+  border: 1px solid var(--line); font-weight: 500; }
+.tabs button.active { background: var(--accent); color: #0d1017; }
+.hidden-view { display: none; }
+.player { position: sticky; bottom: 0; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 10px 14px; margin-top: 8px; }
+.graph-node { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  background: var(--panel2); margin: 4px 0; font-size: 12px; }
+.arrow { color: var(--muted); padding-left: 18px; }
+.badge { font-size: 11px; padding: 1px 7px; border-radius: 4px; margin-left: 6px; }
+.badge.err { background: #3a2222; color: var(--bad); }
+.badge.ok { background: #1f3a32; color: var(--accent2); }
+.dim { opacity: .35; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>符号裁决庭</h1>
+  <span class="sub">本地链接符号裁决 · ELF / shared object / archive · 不调用系统 linker</span>
+</header>
+<div class="layout">
+<aside>
+  <section>
+    <h2>① 导入对象（只读保存）</h2>
+    <input type="file" id="fileInput" multiple>
+    <button onclick="uploadFiles()">上传 ELF / .so / .a</button>
+    <div id="objectList" style="margin-top:10px"></div>
+  </section>
+
+  <section>
+    <h2>② 显式加载顺序</h2>
+    <label>点击左侧对象按顺序加入；可拖动排序前先添加：</label>
+    <div id="orderList"></div>
+    <div class="row">
+      <button class="ghost" onclick="clearOrder()">清空顺序</button>
+    </div>
+    <label>方案名称（同名→新版本，不改旧结果）</label>
+    <input type="text" id="planName" value="demo" />
+    <label>目标平台</label>
+    <select id="platform">
+      <option value="x86-64">x86-64 Linux</option>
+      <option value="aarch64">AArch64 Linux</option>
+    </select>
+    <label>链接模型 / 平台策略</label>
+    <select id="linkModel">
+      <option value="STATIC">静态裁决（archive 惰性抽取）</option>
+      <option value="DYNAMIC">动态裁决（加载顺序 + interposition）</option>
+    </select>
+    <label>同等候选处理</label>
+    <select id="tiePolicy">
+      <option value="FIRST_IN_ORDER">显式加载顺序裁决</option>
+      <option value="REPORT_AMBIGUITY">保留歧义</option>
+    </select>
+    <label class="row" style="color:var(--text)">
+      <input type="checkbox" id="interp" style="width:auto"> 允许符号插入 (interposition)
+    </label>
+    <button onclick="createPlan()">生成方案版本并裁决</button>
+  </section>
+
+  <section>
+    <h2>③ 方案与版本</h2>
+    <div id="planList"></div>
+  </section>
+</aside>
+
+<main>
+  <div id="emptyHint" class="muted">尚未载入方案。上传对象、排好加载顺序后点击“生成方案版本并裁决”。</div>
+  <div id="reportArea" class="hidden-view">
+    <div class="tabs">
+      <button class="active" data-tab="overview" onclick="showTab('overview')">总览</button>
+      <button data-tab="deps" onclick="showTab('deps')">对象依赖</button>
+      <button data-tab="symbols" onclick="showTab('symbols')">符号候选 / 裁决</button>
+      <button data-tab="versions" onclick="showTab('versions')">版本图</button>
+      <button data-tab="relocs" onclick="showTab('relocs')">Relocation</button>
+      <button data-tab="player" onclick="showTab('player')">逐步播放</button>
+      <button data-tab="compare" onclick="showTab('compare')">语义比较</button>
+    </div>
+
+    <div id="tab-overview">
+      <section>
+        <h2>裁决总览</h2>
+        <div id="summary"></div>
+        <div id="parseErrors"></div>
+      </section>
+      <section>
+        <h2>裁决速览</h2>
+        <div id="decisionList"></div>
+      </section>
+    </div>
+    <div id="tab-deps" class="hidden-view"><section><h2>对象依赖图</h2><div id="depsGraph"></div></section></div>
+    <div id="tab-symbols" class="hidden-view">
+      <section>
+        <h2>符号候选与裁决</h2>
+        <label>过滤</label>
+        <input type="text" id="symFilter" oninput="renderDecisions()" placeholder="符号名 / 提供者 / 状态">
+        <div id="symbolDecisions"></div>
+      </section>
+    </div>
+    <div id="tab-versions" class="hidden-view"><section><h2>版本定义与需求</h2><div id="versionGraph"></div></section></div>
+    <div id="tab-relocs" class="hidden-view"><section><h2>受影响 relocation</h2><div id="relocList"></div></section></div>
+    <div id="tab-player" class="hidden-view">
+      <section>
+        <h2>逐步播放：archive 抽取与符号表更新</h2>
+        <div class="player">
+          <div class="row">
+            <button class="ghost" onclick="playStep(-1)">◀ 上一步</button>
+            <button class="ghost" onclick="playStep(1)">下一步 ▶</button>
+            <button class="ghost" onclick="playToEnd()">跳到结束</button>
+            <span id="stepPos" class="muted"></span>
+          </div>
+          <div id="stepDetail" style="margin-top:8px"></div>
+        </div>
+        <div id="playState" style="margin-top:12px"></div>
+      </section>
+    </div>
+    <div id="tab-compare" class="hidden-view">
+      <section>
+        <h2>方案版本语义比较</h2>
+        <div class="row">
+          <select id="cmpA"></select>
+          <span>→</span>
+          <select id="cmpB"></select>
+          <button onclick="runCompare()">比较</button>
+        </div>
+        <div id="compareResult" style="margin-top:10px"></div>
+      </section>
+    </div>
+  </div>
+</main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
