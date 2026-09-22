@@ -1,0 +1,11 @@
+package com.symbolcourt;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class SymbolCourtApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(SymbolCourtApplication.class, args);
+    }
+}
