@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>符号裁决庭</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <p class="eyebrow">ELF LINK EXPLAINER</p>
+    <h1>符号裁决庭</h1>
+    <p>在真正链接前解释未定义符号会选中谁；原二进制只读保存。</p>
+  </div>
+  <button id="loadDemo">载入演示裁决</button>
+</header>
+<main class="layout">
+  <section class="panel controls">
+    <h2>导入与加载顺序</h2>
+    <form id="uploadForm">
+      <input type="file" name="file" required>
+      <button>导入 ELF / archive</button>
+    </form>
+    <form id="schemeForm">
+      <input name="name" placeholder="方案名称" value="新方案">
+      <select name="policy">
+        <option value="GNU_LOAD_ORDER">GNU 风格加载顺序</option>
+        <option value="STRICT_AMBIGUITY">严格保留歧义</option>
+      </select>
+      <div id="binaryList" class="binary-list"></div>
+      <button>生成不可变方案版本</button>
+    </form>
+    <div id="schemeList" class="scheme-list"></div>
+  </section>
+  <section class="panel content">
+    <div class="tabs">
+      <button data-tab="dependencies" class="active">对象依赖</button>
+      <button data-tab="symbols">符号候选</button>
+      <button data-tab="versions">版本图</button>
+      <button data-tab="relocations">Relocation</button>
+      <button data-tab="timeline">Archive 播放</button>
+      <button data-tab="compare">语义比较</button>
+    </div>
+    <div id="summary" class="summary empty">还没有方案。可先载入演示。</div>
+    <div id="dependencies" class="tab active"></div>
+    <div id="symbols" class="tab"></div>
+    <div id="versions" class="tab"></div>
+    <div id="relocations" class="tab"></div>
+    <div id="timeline" class="tab"></div>
+    <div id="compare" class="tab"></div>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>
