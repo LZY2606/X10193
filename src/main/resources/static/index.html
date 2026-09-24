@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>符号裁决庭</title>
+<style>
+  :root { --bg:#14171d; --panel:#1d212b; --panel2:#232836; --line:#313747;
+          --fg:#e6e9f0; --muted:#9aa3b5; --accent:#7db1ff; --good:#73d998;
+          --bad:#ff7a7a; --warn:#ffc46b; --purple:#c39bff; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",
+          system-ui,sans-serif; background:var(--bg); color:var(--fg); }
+  header { padding:18px 24px; border-bottom:1px solid var(--line);
+           display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:22px; letter-spacing:2px; }
+  header .sub { color:var(--muted); font-size:13px; }
+  .wrap { display:grid; grid-template-columns:320px 1fr; min-height:calc(100vh - 64px); }
+  aside { border-right:1px solid var(--line); padding:16px; background:var(--panel);
+          overflow:auto; }
+  main { padding:18px 22px; overflow:auto; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+          padding:14px 16px; margin-bottom:14px; }
+  .card h2 { margin:0 0 10px; font-size:15px; }
+  label { font-size:12px; color:var(--muted); display:block; margin:8px 0 3px; }
+  select,input[type=text],input[type=file] {
+    width:100%; background:var(--panel2); color:var(--fg);
+    border:1px solid var(--line); border-radius:7px; padding:7px 9px; font-size:13px; }
+  input[type=file]{ padding:6px; }
+  button { background:var(--accent); color:#10131a; border:0; border-radius:7px;
+           padding:8px 14px; font-weight:600; cursor:pointer; font-size:13px; }
+  button.ghost { background:transparent; color:var(--fg); border:1px solid var(--line); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .tabs { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+  .tabs button { background:var(--panel2); color:var(--muted); font-weight:500; }
+  .tabs button.active { background:var(--accent); color:#10131a; }
+  table { border-collapse:collapse; width:100%; font-size:12.5px; }
+  th,td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:left;
+          vertical-align:top; }
+  th { color:var(--muted); font-weight:600; position:sticky; top:0;
+       background:var(--panel); }
+  .badge { display:inline-block; padding:1px 7px; border-radius:99px; font-size:11px;
+           border:1px solid var(--line); }
+  .b-RESOLVED { color:var(--good); border-color:var(--good); }
+  .b-UNRESOLVED,.b-UNRESOLVED_WEAK { color:var(--warn); border-color:var(--warn); }
+  .b-AMBIGUOUS { color:var(--purple); border-color:var(--purple); }
+  .b-ERROR,.b-CONFLICT { color:var(--bad); border-color:var(--bad); }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .muted { color:var(--muted); }
+  .cand { border-left:3px solid var(--line); padding:6px 10px; margin:6px 0;
+          background:var(--panel2); border-radius:0 7px 7px 0; }
+  .cand.chosen { border-left-color:var(--good); }
+  .cand.elim { opacity:.72; }
+  .scheme-item { padding:8px 10px; border:1px solid var(--line); border-radius:8px;
+                margin-bottom:8px; cursor:pointer; font-size:13px; }
+  .scheme-item.active { border-color:var(--accent); }
+  svg { max-width:100%; }
+  .node rect { fill:var(--panel2); stroke:var(--line); }
+  .node text { fill:var(--fg); font-size:11px; }
+  .edge path { stroke:#5a6478; fill:none; }
+  .edgeLabel { fill:var(--muted); font-size:10px; }
+  .player { position:sticky; bottom:0; background:var(--panel);
+            border-top:1px solid var(--line); padding:10px 16px; }
+  pre { white-space:pre-wrap; word-break:break-word; background:var(--panel2);
+        padding:8px 10px; border-radius:7px; font-size:12px; }
+  .pill { font-size:11px; color:var(--muted); border:1px solid var(--line);
+          border-radius:6px; padding:0 6px; }
+  .hidden-ver { color:var(--purple); }
+</style>
+</head>
+<body>
+<header>
+  <h1>符号裁决庭</h1>
+  <span class="sub">在真正链接之前，裁决每个未定义符号会选中谁 —— 纯本地 ELF 符号/版本/COMDAT/archive 解释器</span>
+</header>
+<div class="wrap">
+  <aside>
+    <div class="card">
+      <h2>新方案</h2>
+      <label>方案名称</label>
+      <input id="label" type="text" placeholder="例如：调换 libA/libB 顺序">
+      <label>对象（按显式加载顺序选择，可多选）</label>
+      <input id="files" type="file" multiple>
+      <label>裁决阶段</label>
+      <select id="phase">
+        <option value="MIXED">混合（静态 archive + 动态）</option>
+        <option value="STATIC">仅静态（archive/ET_REL）</option>
+        <option value="DYNAMIC">仅动态（load order）</option>
+      </select>
+      <label>protected 策略</label>
+      <select id="protectedMode">
+        <option value="LOCAL">本地绑定（GNU 默认）</option>
+        <option value="ERROR">跨对象引用即报错（严格）</option>
+        <option value="PREEMPTIBLE">允许插入</option>
+      </select>
+      <label>同等候选</label>
+      <select id="tieMode">
+        <option value="AMBIGUOUS">保留歧义（推荐）</option>
+        <option value="FIRST">取首个</option>
+      </select>
+      <div class="row" style="margin-top:8px">
+        <label style="margin:0"><input type="checkbox" id="weakExtract"> weak 也触发 archive 抽取</label>
+      </div>
+      <div class="row" style="margin-top:4px">
+        <label style="margin:0"><input type="checkbox" id="copyReloc" checked> 处理 copy relocation</label>
+      </div>
+      <div style="margin-top:12px"><button id="run">开庭裁决</button>
+        <span id="runMsg" class="muted" style="font-size:12px"></span></div>
+    </div>
+    <div class="card">
+      <h2>历史方案（结果不可变）</h2>
+      <div id="schemeList"><div class="muted" style="font-size:12px">尚无方案</div></div>
+    </div>
+    <div class="card">
+      <h2>语义比较</h2>
+      <label>方案 A / B</label>
+      <div class="row">
+        <select id="diffA" style="flex:1"></select>
+        <select id="diffB" style="flex:1"></select>
+      </div>
+      <div style="margin-top:8px"><button class="ghost" id="diffBtn">比较引用归属</button></div>
+    </div>
+  </aside>
+  <main id="main">
+    <div class="card"><div class="muted">上传 ELF object / shared object / archive 并选择加载顺序，裁决结果将在这里展示。</div></div>
+  </main>
+</div>
+<div class="player" id="player" style="display:none">
+  <div class="row" style="justify-content:space-between">
+    <div class="row">
+      <button class="ghost" id="stepPrev">◀</button>
+      <button id="stepPlay">▶ 播放</button>
+      <button class="ghost" id="stepNext">▶</button>
+      <span id="stepPos" class="mono"></span>
+    </div>
+    <div id="stepTitle" style="font-weight:600"></div>
+  </div>
+  <div id="stepDetail" class="muted" style="margin-top:6px; font-size:12.5px"></div>
+  <pre id="stepSnap" style="display:none; margin-top:8px; max-height:160px; overflow:auto"></pre>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let currentResult = null;
+let currentId = null;
+let steps = [], stepIdx = 0, playTimer = null;
+let activeTab = 'deps';
+
+async function api(path, opts){ const r = await fetch(path, opts);
+  if(!r.ok) throw new Error(await r.text()); return r.json(); }
+
+$('run').onclick = async () => {
+  const fs = $('files').files;
+  if(!fs.length){ $('runMsg').textContent = '请先选择文件'; return; }
+  const fd = new FormData();
+  fd.append('label', $('label').value);
+  for(const f of fs) fd.append('files', f, f.name);
+  fd.append('phase', $('phase').value);
+  fd.append('protectedMode', $('protectedMode').value);
+  fd.append('tieMode', $('tieMode').value);
+  fd.append('weakExtract', $('weakExtract').checked);
+  fd.append('copyReloc', $('copyReloc').checked);
+  $('runMsg').textContent = '裁决中…';
+  try {
+    const out = await api('/api/schemes', {method:'POST', body:fd});
+    currentResult = out.result; currentId = out.schemeId;
+    $('runMsg').textContent = '方案 #' + out.schemeId + ' 已归档';
+    await loadSchemes(); render();
+  } catch(e){ $('runMsg').textContent = '失败: ' + e.message; }
+};
+
+async function loadSchemes(){
+  const list = await api('/api/schemes');
+  $('schemeList').innerHTML = list.length ? '' : '<div class="muted" style="font-size:12px">尚无方案</div>';
+  $('diffA').innerHTML=''; $('diffB').innerHTML='';
+  list.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'scheme-item' + (s.id === currentId ? ' active':'');
+    d.innerHTML = '<div>#'+s.id+' '+esc(s.label)+'</div>'
+      + '<div class="muted" style="font-size:11px">'+(s.created_at||'')+'</div>';
+    d.onclick = async () => {
+      const res = await api('/api/schemes/'+s.id);
+      currentResult = res; currentId = s.id; render(); loadSchemes();
+    };
+    $('schemeList').appendChild(d);
+    [['diffA', i===0],['diffB', i===1]].forEach(([id,sel])=>{
+      const o = document.createElement('option'); o.value=s.id; o.textContent='#'+s.id+' '+s.label;
+      if(sel) o.selected=true; $(id).appendChild(o);
+    });
+  });
+}
+
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>]/g,
+  c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function badge(status){ return '<span class="badge b-'+esc(status)+'">'+esc(status)+'</span>'; }
+
+function render(){
+  if(!currentResult) return;
+  steps = currentResult.steps || []; stepIdx = 0;
+  $('player').style.display = steps.length ? 'block' : 'none';
+  const tabs = [['deps','对象依赖'],['syms','符号候选'],['versions','版本图'],
+                ['relocs','Relocation'],['player','步骤播放']];
+  let html = '<div class="tabs">'+tabs.map(([k,n])=>
+    '<button data-tab="'+k+'" class="'+(k===activeTab?'active':'')+'">'+n+'</button>').join('')+'</div>';
+  html += '<div id="tabbody"></div>';
+  $('main').innerHTML = html;
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{
+    activeTab=b.dataset.tab; render(); });
+  ({deps:tabDeps,syms:tabSyms,versions:tabVersions,relocs:tabRelocs,
+    player:tabPlayer}[activeTab])();
+  showStep(0);
+}
+
+function unitName(id){ for(const u of currentResult.units) if(u.id===id) return u.name; return id; }
+
+function tabDeps(){
+  const r = currentResult;
+  let h = '<div class="card"><h2>输入对象 ('+r.units.length+' 单元)</h2><table>'
+    + '<tr><th>顺序</th><th>单元</th><th>类型</th><th>状态</th><th>ELF</th></tr>';
+  r.units.filter(u=>!u.dormant || u.kind!=='ARCHIVE_MEMBER' || hasActiveSibling(u)).forEach(u=>{
+    h += '<tr><td class="mono">'+u.rankMajor+ (u.rankMinor?'.'+u.rankMinor:'')+'</td>'
+      + '<td>'+esc(u.name)+'</td><td>'+esc(u.kind)+'</td>'
+      + '<td>'+(u.active?(u.dormant?'休眠':'参与链接')
+          : ('<span class="badge b-ERROR">隔离</span> '
+             +esc(u.corruptReason||'')))+'</td>'
+      + '<td class="muted">'+(u.elf?esc(u.elf.machineName+' / '+u.elf.typeName
+          +(u.elf.soname?' / SONAME='+u.elf.soname:'')):'-')+'</td></tr>';
+  });
+  h += '</table></div>';
+  h += '<div class="card"><h2>依赖 / 抽取边</h2><table>'
+    + '<tr><th>从</th><th>边</th><th>到</th><th>状态</th></tr>';
+  (r.edges||[]).forEach(e=>{
+    h += '<tr><td>'+esc(e.from)+'</td><td><span class="pill">'+esc(e.kind)+'</span></td>'
+      + '<td>'+esc(e.to)+'</td><td>'+(e.satisfied
+        ? '<span class="badge b-RESOLVED">满足</span>'
+        : '<span class="badge b-UNRESOLVED">未满足/未抽取</span>')+'</td></tr>';
+  });
+  h += '</table></div>';
+  const corrupt = Object.entries(r.corrupt||{});
+  if(corrupt.length){
+    h += '<div class="card"><h2>损坏隔离</h2>'+corrupt.map(([n,why])=>
+      '<div class="cand elim"><b>'+esc(n)+'</b>：'+esc(why)+'</div>').join('')+'</div>';
+  }
+  $('tabbody').innerHTML = h;
+}
+function hasActiveSibling(u){ return false; }
+
+function tabSyms(){
+  const h = currentResult.resolutions.map(res=>{
+    let c = '<div class="card"><h2 class="mono">'+esc(res.name)
+      + (res.version?'<span class="pill hidden-ver">@'+esc(res.version)+'</span>':'')+' '
+      + badge(res.status)+' <span class="muted" style="font-size:12px">'+esc(res.detail||'')+'</span></h2>';
+    c += '<div class="muted" style="font-size:12px;margin-bottom:6px">引用方：'
+      + [...new Set(res.references.map(x=>x.unitName))].map(esc).join(', ') + '</div>';
+    if(res.winner){ c += '<div class="cand chosen"><b>最终选择：</b>'
+      + esc(res.winner.unitName)+' <span class="mono">['
+      + esc(winnerDesc(res.winner))+']</span>'
+      + (res.winnerAddress?' <span class="pill mono">'+esc(res.winnerAddress)+'</span>':'')+'</div>'; }
+    const others = res.candidates.filter(x=>!x.chosen);
+    if(others.length){
+      c += '<div class="muted" style="font-size:12px;margin:6px 0 2px">候选与淘汰：</div>';
+      c += others.map(x=>'<div class="cand elim">'+esc(x.def.unitName)
+        +' <span class="mono">['+esc(candDesc(x.def))+']</span>'
+        +'<div class="muted" style="font-size:12px">✗ '+esc(x.reason)+'</div></div>').join('');
+    }
+    const rels = res.references.flatMap(x=>x.relocs.map(l=>({u:x.unitName,l})));
+    if(rels.length){
+      c += '<details style="margin-top:6px"><summary class="muted" style="font-size:12px">受影响 relocation ('+rels.length+')</summary><table>'
+        + '<tr><th>单元</th><th>节</th><th>偏移</th><th>类型</th><th>addend</th></tr>'
+        + rels.map(({u,l})=>'<tr><td>'+esc(u)+'</td><td class="mono">'+esc(l.section)+'</td>'
+          +'<td class="mono">0x'+Number(l.offset).toString(16)+'</td><td>'+esc(l.type)+'</td>'
+          +'<td class="mono">'+(l.addend==null?'':('0x'+Number(l.addend).toString(16)))+'</td></tr>').join('')
+        + '</table></details>';
+    }
+    return c+'</div>';
+  }).join('');
+  $('tabbody').innerHTML = h || '<div class="card muted">无符号结论</div>';
+}
+function winnerDesc(d){ return [d.bindName?d.bindName:bind(d), d.visibilityName?d.visibilityName:vis(d),
+  d.sectionName, d.version, d.copyDefinition?'COPY'].filter(Boolean).join(' / '); }
+function candDesc(d){ return [bind(d), vis(d), d.sectionName, d.version,
+  d.copyDefinition?'COPY':null, d.dormant?'休眠':null].filter(Boolean).join(' / '); }
+function bind(d){ return ({0:'LOCAL',1:'GLOBAL',2:'WEAK',10:'UNIQUE'})[d.bind]||('BIND'+d.bind); }
+function vis(d){ return ({0:'DEFAULT',1:'INTERNAL',2:'HIDDEN',3:'PROTECTED'})[d.visibility]||('VIS'+d.visibility); }
+
+function tabVersions(){
+  const gs = Object.values(currentResult.versionGraphs||{});
+  if(!gs.length){ $('tabbody').innerHTML='<div class="card muted">该方案无版本节点</div>'; return; }
+  let h = '';
+  gs.forEach(g=>{
+    h += '<div class="card"><h2>'+esc(unitName(g.unitId))+' 版本图</h2>'+svgGraph(g)+'</div>';
+  });
+  $('tabbody').innerHTML = h;
+}
+function svgGraph(g){
+  // Simple layered DAG layout by node kind.
+  const kinds = ['SYMBOL','DEFINITION','ALIAS','NEED_VERSION','NEED_FILE'];
+  const layers = {}; kinds.forEach(k=>layers[k]=[]);
+  g.nodes.forEach(n=>(layers[n.kind]||(layers[n.kind]=[])).push(n));
+  const pos = {}; const layerX = {SYMBOL:30, DEFINITION:260, ALIAS:260, NEED_VERSION:490, NEED_FILE:720};
+  kinds.forEach(k=>layers[k].forEach((n,i)=>pos[n.id]={x:layerX[k], y:20+i*46}));
+  const edges = g.edges.map(e=>{
+    const a=pos[e.from], b=pos[e.to]; if(!a||!b) return '';
+    const x1=a.x+120, y1=a.y+14, x2=b.x, y2=b.y+14;
+    return `<g class="edge"><path d="M${x1},${y1} C${(x1+x2)/2},${y1} ${(x1+x2)/2},${y2} ${x2},${y2}"/>
+      <text class="edgeLabel" x="${(x1+x2)/2}" y="${(y1+y2)/2-3}">${esc(e.label)}</text></g>`;
+  }).join('');
+  const nodes = g.nodes.map(n=>{
+    const p=pos[n.id];
+    const color = n.kind==='SYMBOL' ? '#7db1ff' : n.kind==='NEED_FILE'||n.kind==='NEED_VERSION' ? '#ffc46b'
+      : n.hiddenVersion ? '#c39bff' : '#73d998';
+    return `<g class="node" transform="translate(${p.x},${p.y})">
+      <rect width="150" height="28" rx="6" stroke="${color}"/>
+      <text x="8" y="18" fill="${color}">${esc(n.label).slice(0,22)}</text></g>`;
+  }).join('');
+  const maxY = Math.max(80, ...Object.values(pos).map(p=>p.y+60));
+  return `<svg width="100%" height="${maxY}" viewBox="0 0 900 ${maxY}">${edges}${nodes}</svg>`;
+}
+
+function tabRelocs(){
+  let rows = [];
+  currentResult.units.forEach(u=>{
+    (u.refs||[]).forEach(ref=>(ref.relocs||[]).forEach(l=>rows.push({u,ref,l})));
+  });
+  const res = currentResult.resolutions;
+  let h = '<div class="card"><h2>Relocation 列表 ('+rows.length+')</h2><table>'
+    + '<tr><th>单元</th><th>符号</th><th>节:偏移</th><th>类型</th><th>裁决</th></tr>'
+    + rows.map(({u,ref,l})=>{
+      const rs = res.find(r=>r.name===ref.name && (r.version||null)===(ref.version||null));
+      const win = rs && rs.winner ? rs.winner.unitName : (rs?rs.status:'-');
+      return '<tr><td>'+esc(u.name)+'</td><td class="mono">'+esc(ref.name)
+        +(ref.version?'<span class="pill">'+esc(ref.version)+'</span>':'')+'</td>'
+        + '<td class="mono">'+esc(l.section)+'+0x'+Number(l.offset).toString(16)+'</td>'
+        + '<td>'+esc(l.type)+(l.copyReloc?' <span class="badge b-AMBIGUOUS">COPY</span>':'')+'</td>'
+        + '<td>'+esc(win)+'</td></tr>';
+    }).join('') + '</table></div>';
+  $('tabbody').innerHTML = h;
+}
+
+function tabPlayer(){
+  let h = '<div class="card"><h2>Archive 抽取与符号表更新（逐步）</h2><table>'
+    + '<tr><th>#</th><th>事件</th><th>说明</th></tr>'
+    + steps.map(s=>'<tr data-step="'+s.index+'" style="cursor:pointer"><td class="mono">'+s.index+'</td>'
+      + '<td><span class="pill">'+esc(s.kind)+'</span> '+esc(s.title)+'</td>'
+      + '<td class="muted">'+esc(s.detail||'')+'</td></tr>').join('')
+    + '</table></div>';
+  $('tabbody').innerHTML = h;
+  document.querySelectorAll('[data-step]').forEach(tr=>tr.onclick=()=>{
+    stepIdx = +tr.dataset.step; showStep(stepIdx);
+  });
+}
+
+function showStep(i){
+  if(!steps.length) return;
+  stepIdx = Math.max(0, Math.min(steps.length-1, i));
+  const s = steps[stepIdx];
+  $('stepPos').textContent = (stepIdx+1)+' / '+steps.length;
+  $('stepTitle').textContent = s.kind+' — '+s.title;
+  $('stepDetail').textContent = s.detail||'';
+  if(s.symbolTable && Object.keys(s.symbolTable).length){
+    $('stepSnap').style.display='block';
+    $('stepSnap').textContent = '当前符号表快照：\n'
+      + Object.entries(s.symbolTable).map(([k,v])=>'  '+k+'  ←  '+v).join('\n');
+  } else {
+    $('stepSnap').style.display='none';
+  }
+  document.querySelectorAll('[data-step]').forEach(tr=>
+    tr.style.outline = (+tr.dataset.step===stepIdx)?'2px solid #7db1ff':'none');
+}
+$('stepPrev').onclick=()=>{stopPlay();showStep(stepIdx-1);};
+$('stepNext').onclick=()=>{stopPlay();showStep(stepIdx+1);};
+$('stepPlay').onclick=()=>{
+  if(playTimer){stopPlay();return;}
+  $('stepPlay').textContent='⏸ 暂停';
+  playTimer=setInterval(()=>{
+    if(stepIdx>=steps.length-1){stopPlay();return;}
+    showStep(stepIdx+1);
+  },900);
+};
+function stopPlay(){clearInterval(playTimer);playTimer=null;$('stepPlay').textContent='▶ 播放';}
+
+$('diffBtn').onclick = async ()=>{
+  const a=$('diffA').value, b=$('diffB').value;
+  if(!a||!b){return;}
+  const d = await api('/api/schemes/'+a+'/diff/'+b);
+  const color={PROVIDER_CHANGED:'b-AMBIGUOUS',ADDRESS_CHANGED:'b-RESOLVED',
+    NEW:'b-UNRESOLVED',REMOVED:'b-UNRESOLVED',STATUS_CHANGED:'b-ERROR'};
+  $('tabbody').innerHTML = '<div class="card"><h2>方案 #'+a+' vs #'+b
+    +' 语义比较（'+d.changedCount+' 项变化）</h2><table>'
+    + '<tr><th>符号</th><th>变化类型</th><th>说明</th><th>A</th><th>B</th></tr>'
+    + (d.items||[]).map(it=>'<tr><td class="mono">'+esc(it.name)
+      +(it.version?'<span class="pill">'+esc(it.version)+'</span>':'')+'</td>'
+      +'<td><span class="badge '+(color[it.kind]||'')+'">'+esc(it.kind)+'</span></td>'
+      +'<td>'+esc(it.detail)+'</td>'
+      +'<td class="mono" style="font-size:11px">'+esc(it.providerA||it.statusA||'')+'<br>'
+        +'<span class="muted">'+esc(it.addressA||'')+'</span></td>'
+      +'<td class="mono" style="font-size:11px">'+esc(it.providerB||it.statusB||'')+'<br>'
+        +'<span class="muted">'+esc(it.addressB||'')+'</span></td></tr>').join('')
+    + '</table></div>';
+  activeTab='syms';
+};
+
+loadSchemes();
+</script>
+</body>
+</html>
