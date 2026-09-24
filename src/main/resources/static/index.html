@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>符号裁决庭</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", sans-serif; margin: 0; background: #14161a; color: #ddd; }
+  header { background: #1e222b; padding: 14px 24px; border-bottom: 2px solid #3a4a6b; }
+  header h1 { margin: 0; font-size: 22px; color: #8fb4ff; }
+  header p { margin: 4px 0 0; color: #889; font-size: 13px; }
+  main { display: grid; grid-template-columns: 340px 1fr; gap: 12px; padding: 12px; }
+  section { background: #1b1f27; border: 1px solid #2c3340; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  h2 { font-size: 15px; color: #9fc0ff; margin: 0 0 8px; }
+  h3 { font-size: 13px; color: #7d94c0; margin: 10px 0 4px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th, td { border: 1px solid #2c3340; padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: #232936; color: #9fc0ff; }
+  button { background: #2f4a7a; color: #dde7ff; border: 1px solid #4a6aa8; border-radius: 5px; padding: 5px 12px; cursor: pointer; font-size: 13px; }
+  button:hover { background: #3a5a94; }
+  select, input[type=text] { background: #12151b; color: #dde; border: 1px solid #3a4356; border-radius: 4px; padding: 4px 6px; }
+  .obj { padding: 4px 6px; border: 1px solid #333c4d; border-radius: 4px; margin: 3px 0; cursor: grab; font-size: 12px; background:#171b23; }
+  .obj.corrupt { border-color: #7a2f2f; color: #e08a8a; }
+  #loadOrder .obj { cursor: default; }
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 11px; margin-right: 4px; }
+  .RESOLVED, .LOCAL { background: #1e4d2b; color: #9fe6b0; }
+  .COMMON_ALLOCATED { background: #4d431e; color: #e6d89f; }
+  .COPY_RELOC { background: #4d2b1e; color: #f0b59f; }
+  .UNDEFINED, .UNDEFINED_VERSION, .BAD_INDEX { background: #5a1f1f; color: #f2a0a0; }
+  .WEAK_UNRESOLVED { background: #3a3f4d; color: #b9c2d8; }
+  .AMBIGUOUS { background: #5a4a1f; color: #f2dfa0; }
+  .reason { color: #c98; }
+  .chosen { color: #9fe6b0; font-weight: bold; }
+  .amb { color: #f2dfa0; font-weight: bold; }
+  .stepcur { background: #2f4a7a !important; }
+  #steps div { font-size: 12px; padding: 3px 6px; border-radius: 4px; }
+  .mono { font-family: ui-monospace, Menlo, monospace; }
+  .dep { color: #8fb4ff; font-size: 12px; }
+  .muted { color: #778; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>符号裁决庭</h1>
+  <p>本地符号裁决：解析 ELF / archive，列出候选提供者、淘汰原因、最终选择与受影响 relocation。原二进制只读保存，不调用系统 linker。</p>
+</header>
+<main>
+  <div>
+    <section>
+      <h2>1. 导入对象（只读保存）</h2>
+      <input type="file" id="files" multiple>
+      <button onclick="upload()">导入</button>
+      <div id="importLog" class="muted"></div>
+      <h3>对象池</h3>
+      <div id="pool"></div>
+    </section>
+    <section>
+      <h2>2. 加载顺序与平台策略</h2>
+      <div id="loadOrder"></div>
+      <div style="margin:6px 0">
+        <button onclick="moveSel(-1)">上移</button>
+        <button onclick="moveSel(1)">下移</button>
+        <select id="policy">
+          <option value="linux-like">linux-like（首见优先 / 惰性归档 / copy reloc）</option>
+          <option value="keep-ambiguity">keep-ambiguity（保留歧义）</option>
+          <option value="eager-no-copy">eager-no-copy（全量抽取 / 无 copy reloc）</option>
+        </select>
+      </div>
+      <input type="text" id="schemeName" placeholder="方案名" style="width:55%">
+      <button onclick="createScheme()">开庭裁决（生成新方案版本）</button>
+      <div id="schemeMsg" class="muted"></div>
+    </section>
+    <section>
+      <h2>3. 历史方案（结果不漂移）</h2>
+      <div id="schemes"></div>
+      <h3>语义比较</h3>
+      <select id="cmpA"></select> vs <select id="cmpB"></select>
+      <button onclick="compare()">比较</button>
+    </section>
+  </div>
+  <div>
+    <section>
+      <h2>裁决回放（archive 抽取与符号表更新）</h2>
+      <button onclick="stepPlay(-1)">◀ 上一步</button>
+      <button onclick="stepPlay(1)">下一步 ▶</button>
+      <button onclick="stepPlay(0)">重置</button>
+      <span id="stepPos" class="muted"></span>
+      <div id="steps" style="max-height:140px;overflow:auto;margin-top:6px"></div>
+    </section>
+    <section>
+      <h2>对象依赖</h2>
+      <div id="deps"></div>
+    </section>
+    <section>
+      <h2>符号候选与裁决</h2>
+      <div id="verdicts"></div>
+    </section>
+    <section>
+      <h2>版本图</h2>
+      <div id="vgraph"></div>
+    </section>
+    <section>
+      <h2>Relocation 列表</h2>
+      <div id="relocs"></div>
+    </section>
+    <section>
+      <h2>方案语义比较结果</h2>
+      <div id="cmpResult" class="muted">选择两个方案后点击“比较”。PROVIDER_CHANGED = 换了提供者；ADDRESS_ONLY = 仅地址变化。</div>
+    </section>
+  </div>
+</main>
+<script>
+let objects = [], order = [], sel = -1, current = null, stepIdx = -1;
+
+async function api(p, opt) { const r = await fetch(p, opt); return r.json(); }
+
+async function refresh() {
+  objects = await api('/api/objects');
+  const pool = document.getElementById('pool');
+  pool.innerHTML = objects.map(o =>
+    `<div class="obj ${o.error?'corrupt':''}" draggable="${!o.error}" data-id="${o.id}">
+       #${o.id} ${o.name} <span class="muted">${o.kind} ${o.size}B${o.error?' ⚠ '+o.error:''}</span>
+       ${o.error?'':'<button onclick="addToOrder('+o.id+')">加入</button>'}
+     </div>`).join('');
+  renderOrder();
+  const schemes = await api('/api/schemes');
+  document.getElementById('schemes').innerHTML = schemes.map(s =>
+    `<div class="obj">#${s.id} ${s.name} <span class="muted">${s.policy} · ${s.createdAt}</span>
+       <button onclick="loadScheme(${s.id})">查看</button></div>`).join('');
+  for (const id of ['cmpA','cmpB']) {
+    document.getElementById(id).innerHTML =
+      schemes.map(s => `<option value="${s.id}">#${s.id} ${s.name}</option>`).join('');
+  }
+}
+
+function addToOrder(id) { if (!order.includes(id)) { order.push(id); renderOrder(); } }
+function renderOrder() {
+  document.getElementById('loadOrder').innerHTML = order.map((id, i) => {
+    const o = objects.find(x => x.id === id);
+    return `<div class="obj ${i===sel?'stepcur':''}" onclick="sel=${i};renderOrder()">${i+1}. ${o?o.name:id}</div>`;
+  }).join('') || '<div class="muted">从对象池“加入”以形成加载顺序</div>';
+}
+function moveSel(d) {
+  if (sel < 0) return;
+  const j = sel + d;
+  if (j < 0 || j >= order.length) return;
+  [order[sel], order[j]] = [order[j], order[sel]];
+  sel = j; renderOrder();
+}
+
+async function upload() {
+  const f = document.getElementById('files').files;
+  if (!f.length) return;
+  const fd = new FormData();
+  for (const x of f) fd.append('files', x);
+  const res = await api('/api/objects', { method: 'POST', body: fd });
+  document.getElementById('importLog').innerHTML = res.map(r =>
+    `<div>${r.name}: ${r.error ? '<span class="reason">已隔离 '+r.error+'</span>' : 'OK '+r.kind}</div>`).join('');
+  refresh();
+}
+
+async function createScheme() {
+  if (!order.length) { alert('请先加入加载顺序'); return; }
+  const res = await api('/api/schemes', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: document.getElementById('schemeName').value,
+      objectIds: order, policy: document.getElementById('policy').value })
+  });
+  document.getElementById('schemeMsg').textContent =
+    res.error ? '失败: ' + res.error : '方案 #' + res.id + ' 已固化';
+  refresh();
+  if (res.id) loadScheme(res.id);
+}
+
+async function loadScheme(id) {
+  current = await api('/api/schemes/' + id);
+  stepIdx = -1;
+  renderResult();
+}
+
+function renderResult() {
+  const r = current.result;
+  document.getElementById('deps').innerHTML = r.objects.map(o =>
+    `<div class="dep mono">${o.loadOrder}. ${o.name} <span class="muted">${o.kind} base=0x${o.base.toString(16)}${o.extracted?' (archive 抽出)':''}</span>
+     ${o.deps.length ? '→ 依赖 ' + o.deps.join(', ') : ''}</div>`).join('');
+  document.getElementById('verdicts').innerHTML = r.verdicts.map(v => `
+    <h3 class="mono">${v.object}: ${v.symbol}${v.version?'@'+v.version:''}
+      <span class="tag ${v.status}">${v.status}</span>
+      ${v.chosen?'→ <span class="chosen">'+v.chosen+'</span> @ 0x'+v.address.toString(16):''}</h3>
+    <table><tr><th>候选提供者</th><th>绑定</th><th>版本</th><th>结论 / 淘汰原因</th></tr>
+    ${v.candidates.map(c => `<tr>
+      <td class="mono">${c.object}</td><td>${c.binding}${c.common?' (common)':''}</td>
+      <td>${c.version ? (c.defaultVersion?'@@':'@')+c.version : '—'}</td>
+      <td class="${c.chosen?'chosen':c.ambiguous?'amb':'reason'}">${c.reason}</td></tr>`).join('')}
+    </table>`).join('') || '<div class="muted">无引用</div>';
+  document.getElementById('vgraph').innerHTML = r.versionGraph.map(n =>
+    `<div class="mono" style="font-size:12px">${n.object} ${n.kind==='defines'?'定义 ⊕':'需求 ⊖'}
+     <b>${n.version}</b>${n.file?' ← '+n.file:''}</div>`).join('') || '<div class="muted">无版本信息</div>';
+  document.getElementById('relocs').innerHTML =
+    `<table><tr><th>对象</th><th>节</th><th>偏移</th><th>类型</th><th>符号</th><th>提供者</th><th>地址</th><th>状态</th></tr>` +
+    r.relocs.map(x => `<tr><td class="mono">${x.object}</td><td>${x.section}</td>
+      <td class="mono">0x${x.offset.toString(16)}</td><td>${x.type}</td><td class="mono">${x.symbol}</td>
+      <td class="mono">${x.provider||''}</td><td class="mono">${x.address?'0x'+x.address.toString(16):''}</td>
+      <td><span class="tag ${x.status}">${x.status}</span></td></tr>`).join('') + '</table>';
+  renderSteps();
+}
+
+function renderSteps() {
+  const steps = current.result.steps;
+  document.getElementById('steps').innerHTML = steps.map((s, i) =>
+    `<div class="${i===stepIdx?'stepcur':''}">[${s.seq}] <b>${s.kind}</b> ${s.message}</div>`).join('');
+  document.getElementById('stepPos').textContent =
+    (stepIdx >= 0 ? `第 ${stepIdx+1}/${steps.length} 步` : `共 ${steps.length} 步`);
+}
+function stepPlay(d) {
+  if (!current) return;
+  const n = current.result.steps.length;
+  stepIdx = d === 0 ? -1 : Math.min(n - 1, Math.max(0, stepIdx + d));
+  renderSteps();
+}
+
+async function compare() {
+  const a = document.getElementById('cmpA').value, b = document.getElementById('cmpB').value;
+  const res = await api(`/api/schemes/compare?a=${a}&b=${b}`);
+  document.getElementById('cmpResult').innerHTML = res.length ?
+    `<table><tr><th>引用</th><th>变化</th><th>原提供者</th><th>新提供者</th><th>地址</th></tr>` +
+    res.map(c => `<tr><td class="mono">${c.object}: ${c.symbol}${c.version?'@'+c.version:''}</td>
+      <td><span class="tag ${c.change==='PROVIDER_CHANGED'?'COPY_RELOC':'COMMON_ALLOCATED'}">${c.change}</span></td>
+      <td class="mono">${c.fromProvider||''}</td><td class="mono">${c.toProvider||''}</td>
+      <td class="mono">0x${c.fromAddress.toString(16)} → 0x${c.toAddress.toString(16)}</td></tr>`).join('') + '</table>'
+    : '<div class="muted">两方案语义一致（无提供者变化、无地址变化）。</div>';
+}
+
+refresh();
+</script>
+</body>
+</html>
