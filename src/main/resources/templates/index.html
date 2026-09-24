@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>符号裁决庭</title>
+<style>
+ body{font-family:-apple-system,"PingFang SC",sans-serif;margin:2rem;background:#f6f7f9;color:#222}
+ h1{color:#5a32a3}
+ .card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:1rem 1.5rem;margin-bottom:1.5rem}
+ table{border-collapse:collapse;width:100%}
+ th,td{border:1px solid #e0e0e0;padding:.4rem .7rem;text-align:left;font-size:.9rem}
+ th{background:#efebfa}
+ a{color:#5a32a3}
+ label{margin-right:1rem;font-size:.9rem}
+</style>
+</head>
+<body>
+<h1>⚖️ 符号裁决庭</h1>
+<p>在真正链接之前，解释“这个未定义符号会选中谁”。导入 ELF 对象与显式加载顺序，裁决庭给出每个符号的候选、淘汰原因与最终选择。</p>
+
+<div class="card">
+<h2>开庭审案（新方案版本）</h2>
+<form method="post" action="/schemes" enctype="multipart/form-data">
+  <p>方案名：<input type="text" name="name" required placeholder="例如：baseline-v1"></p>
+  <p>对象文件（按加载顺序多选 ELF / .a）：<input type="file" name="files" multiple required></p>
+  <p>目标平台策略：
+    <label><input type="checkbox" name="copyRelocations" checked> copy relocation</label>
+    <label><input type="checkbox" name="protectedPreemptible"> protected 可抢占</label>
+    <label><input type="checkbox" name="tolerateMultipleStrongDefs"> 容忍重复 strong</label>
+    <label><input type="checkbox" name="undefinedWeakResolvesToZero" checked> 未定义弱符号归零</label>
+  </p>
+  <button type="submit">开庭裁决</button>
+</form>
+</div>
+
+<div class="card">
+<h2>历史方案（不可变，结果不漂移）</h2>
+<table>
+<tr><th>ID</th><th>名称</th><th>创建时间</th><th>对象数</th><th>裁决数</th><th>策略</th><th></th></tr>
+<tr th:each="s : ${schemes}">
+  <td th:text="${s.id}">1</td>
+  <td><a th:href="@{/schemes/{id}(id=${s.id})}" th:text="${s.name}">baseline</a></td>
+  <td th:text="${s.created_at}">-</td>
+  <td th:text="${s.objects}">0</td>
+  <td th:text="${s.verdicts}">0</td>
+  <td><code th:text="${s.policy_json}">{}</code></td>
+  <td><a th:href="@{/schemes/{id}(id=${s.id})}">查看</a></td>
+</tr>
+</table>
+<p th:if="${#lists.isEmpty(schemes)}">尚无方案，先上传一批对象开庭。</p>
+</div>
+
+<div class="card">
+<h2>语义比较</h2>
+<form method="get" action="/compare">
+  方案 A：<input type="number" name="a" required style="width:6rem">
+  方案 B：<input type="number" name="b" required style="width:6rem">
+  <button type="submit">比较</button>
+</form>
+</div>
+</body>
+</html>

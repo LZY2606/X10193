@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: symbol-tribunal
+  datasource:
+    url: jdbc:sqlite:${user.home}/.symbol-tribunal/tribunal.db
+    driver-class-name: org.sqlite.JDBC
+  sql:
+    init:
+      mode: always
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 200MB
+server:
+  port: 8080
