@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>符号裁决庭</title>
+    <link rel="stylesheet" th:href="@{/app.css}"/>
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">⚖️ 符号裁决庭 <span class="sub">本地 ELF 符号裁决 / Symbol Arbitration Court</span></div>
+    <div class="hint">不调用系统 linker，自行解析 ELF · ar · 版本 · COMDAT · relocation</div>
+</header>
+
+<main class="layout">
+    <aside class="sidebar">
+        <section class="card">
+            <h3>1. 导入对象</h3>
+            <input type="file" id="fileInput" multiple/>
+            <button id="uploadBtn">上传</button>
+            <ul id="artifactList" class="artifact-list"></ul>
+        </section>
+
+        <section class="card">
+            <h3>2. 加载顺序</h3>
+            <p class="tiny">点击对象按显式加载顺序加入（archive 惰性抽取）。</p>
+            <ol id="orderList" class="order-list"></ol>
+            <div class="row">
+                <button id="clearOrderBtn">清空</button>
+            </div>
+            <label>平台策略
+                <select id="policySelect"></select>
+            </label>
+            <label>方案名称
+                <input id="schemeName" placeholder="例如 顺序A / 严格策略"/>
+            </label>
+            <button id="runBtn" class="primary">开始裁决</button>
+        </section>
+
+        <section class="card">
+            <h3>历史方案（只读快照）</h3>
+            <ul id="schemeList" class="scheme-list"></ul>
+        </section>
+
+        <section class="card">
+            <h3>方案语义比较</h3>
+            <label>方案 A <select id="diffA"></select></label>
+            <label>方案 B <select id="diffB"></select></label>
+            <button id="diffBtn">比较</button>
+            <div id="diffResult"></div>
+        </section>
+    </aside>
+
+    <section class="content">
+        <div id="welcome" class="welcome">
+            <h2>符号裁决庭</h2>
+            <p>导入 ELF relocatable / shared object 与 ar archive，设定显式加载顺序与平台策略，
+                查看每个未定义符号的候选提供者、淘汰原因、最终选择与受影响 relocation。</p>
+            <div class="chips">
+                <span>strong / weak</span><span>common</span><span>local</span>
+                <span>protected / hidden</span><span>默认/非默认版本</span>
+                <span>COMDAT 去重</span><span>copy relocation</span><span>archive 循环</span>
+                <span>未满足版本</span><span>重复候选歧义</span>
+            </div>
+        </div>
+
+        <div id="result" class="result hidden">
+            <div class="result-head">
+                <h2 id="resultTitle"></h2>
+                <div id="summary" class="summary"></div>
+            </div>
+
+            <div class="messages">
+                <div class="msg errors" id="errorBox"></div>
+                <div class="msg warnings" id="warningBox"></div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="deps">对象依赖</button>
+                <button class="tab" data-tab="symbols">符号候选</button>
+                <button class="tab" data-tab="versions">版本图</button>
+                <button class="tab" data-tab="relocs">Relocation</button>
+                <button class="tab" data-tab="play">逐步播放</button>
+            </div>
+
+            <div class="tabpane" id="tab-deps"></div>
+            <div class="tabpane hidden" id="tab-symbols"></div>
+            <div class="tabpane hidden" id="tab-versions"></div>
+            <div class="tabpane hidden" id="tab-relocs"></div>
+            <div class="tabpane hidden" id="tab-play"></div>
+        </div>
+    </section>
+</main>
+<script th:src="@{/app.js}"></script>
+</body>
+</html>
