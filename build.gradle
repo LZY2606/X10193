@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.verdict'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation platform('org.springframework.boot:spring-boot-dependencies:3.3.5')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    runtimeOnly 'org.xerial:sqlite-jdbc:3.45.3.0'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+    }
+}
+
+// 本地“符号裁决庭”启动任务（等价于 Spring Boot 的 bootRun）
+tasks.register('bootRun', JavaExec) {
+    group = 'application'
+    description = '启动符号裁决庭 Web 服务'
+    mainClass = 'com.verdict.elf.VerdictApplication'
+    classpath = sourceSets.main.runtimeClasspath
+}
